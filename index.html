@@ -28,11 +28,22 @@
   }
 
   #lock-screen {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
     padding: 2rem;
+  }
+
+  #redirect-screen {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #111;
+    font-size: 15px;
   }
 
   .lock-card {
@@ -275,6 +286,9 @@
 </style>
 </head>
 <body>
+
+<!-- REDIRECT SCREEN -->
+<div id="redirect-screen">Redirecting...</div>
 
 <!-- LOCK SCREEN -->
 <div id="lock-screen">
@@ -579,6 +593,7 @@ function handleTracking() {
   const params = new URLSearchParams(window.location.search);
   const poster = params.get('poster');
   if (poster === 'a' || poster === 'b' || poster === 'c') {
+    document.getElementById('redirect-screen').style.display = 'flex';
     const state = getState();
     if (!state.startDate) state.startDate = new Date().toISOString();
     if (poster === 'a') state.countA++;
@@ -587,8 +602,10 @@ function handleTracking() {
     if (!state.log) state.log = [];
     state.log.push({ poster, time: new Date().toISOString() });
     saveState(state);
-    setTimeout(() => { window.location.href = state.redirect; }, 150);
+    setTimeout(() => { window.location.href = state.redirect; }, 100);
+    return true;
   }
+  return false;
 }
 
 function getTrackingURL(poster) {
@@ -653,7 +670,10 @@ function downloadQR(poster, format) {
   }
 }
 
-handleTracking();
+const isTracking = handleTracking();
+if (!isTracking) {
+  document.getElementById('lock-screen').style.display = 'flex';
+}
 </script>
 </body>
 </html>
