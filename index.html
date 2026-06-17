@@ -382,7 +382,7 @@
     <div class="settings-row-2">
       <div>
         <div class="field-label">Redirect URL (all QR codes go here)</div>
-        <input type="url" class="field-input" id="redirect-url" placeholder="https://yourwebsite.com" value="https://kaska.de" />
+        <input type="url" class="field-input" id="redirect-url" placeholder="https://yourwebsite.com" value="https://www.instagram.com/drinkkaska/" />
       </div>
       <div>
         <div class="field-label">Dashboard password (to change)</div>
@@ -447,7 +447,7 @@ function getState() {
   return s ? JSON.parse(s) : {
     countA: 0, countB: 0, countC: 0,
     nameA: 'Poster A', nameB: 'Poster B', nameC: 'Poster C',
-    redirect: 'https://kaska.de',
+    redirect: 'https://www.instagram.com/drinkkaska/',
     password: DEFAULT_PW,
     startDate: null,
     log: []
@@ -571,7 +571,7 @@ function saveSettings() {
   state.nameA = document.getElementById('name-a-input').value || 'Poster A';
   state.nameB = document.getElementById('name-b-input').value || 'Poster B';
   state.nameC = document.getElementById('name-c-input').value || 'Poster C';
-  state.redirect = document.getElementById('redirect-url').value || 'https://kaska.de';
+  state.redirect = document.getElementById('redirect-url').value || 'https://www.instagram.com/drinkkaska/';
   const newPw = document.getElementById('new-pw').value;
   if (newPw.trim()) { state.password = newPw.trim(); }
   document.getElementById('new-pw').value = '';
