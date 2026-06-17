@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poster A/B/C Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #f0f0f0;
+    --muted: #888;
+    --accent-a: #c8f55a;
+    --accent-b: #5af5e8;
+    --accent-c: #f5a05a;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  #lock-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .lock-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+  }
+
+  .lock-card h1 { font-size: 18px; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+  .lock-card p { font-size: 13px; color: var(--muted); margin-bottom: 2rem; }
+
+  .lock-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 15px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .lock-input:focus { border-color: var(--accent-a); }
+
+  .lock-btn {
+    width: 100%;
+    background: var(--accent-a);
+    color: #000;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .lock-btn:hover { opacity: 0.85; }
+  .lock-error { font-size: 12px; color: #ff6b6b; margin-top: 0.75rem; display: none; }
+
+  #dashboard { display: none; padding: 2rem; max-width: 1020px; margin: 0 auto; }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+  }
+
+  .top-bar h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.03em; }
+  .top-bar-actions { display: flex; gap: 0.75rem; align-items: center; }
+
+  .btn-sm {
+    font-size: 12px;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-sm:hover { border-color: #555; color: var(--text); }
+  .btn-danger:hover { border-color: #ff6b6b; color: #ff6b6b; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+  }
+
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.5rem; }
+  .stat-value { font-size: 32px; font-weight: 700; letter-spacing: -0.04em; }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 0.25rem; }
+
+  .poster-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .poster-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+  }
+
+  .poster-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
+
+  .poster-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-a { background: var(--accent-a); }
+  .dot-b { background: var(--accent-b); }
+  .dot-c { background: var(--accent-c); }
+
+  .poster-title { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+
+  .poster-count { font-size: 48px; font-weight: 700; letter-spacing: -0.05em; margin-bottom: 0.5rem; }
+  .count-a { color: var(--accent-a); }
+  .count-b { color: var(--accent-b); }
+  .count-c { color: var(--accent-c); }
+
+  .poster-pct { font-size: 13px; color: var(--muted); margin-bottom: 1.5rem; }
+
+  .bar-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 1.5rem; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .bar-a { background: var(--accent-a); }
+  .bar-b { background: var(--accent-b); }
+  .bar-c { background: var(--accent-c); }
+
+  .qr-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .section-title { font-size: 14px; font-weight: 600; margin-bottom: 1.25rem; letter-spacing: -0.02em; }
+
+  .qr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .qr-item { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+
+  .qr-box { background: #fff; border-radius: 8px; padding: 12px; display: inline-block; }
+
+  .qr-label { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
+
+  .qr-url { font-size: 11px; color: var(--muted); word-break: break-all; text-align: center; max-width: 220px; }
+
+  .btn-download {
+    font-size: 12px;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-download:hover { border-color: #555; }
+
+  .settings-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .settings-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .settings-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+
+  .field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.4rem; }
+
+  .field-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 0.6rem 0.8rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field-input:focus { border-color: var(--accent-a); }
+
+  .btn-primary {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent-a);
+    color: #000;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn-primary:hover { opacity: 0.85; }
+
+  .log-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .log-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 240px; overflow-y: auto; }
+
+  .log-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .log-entry:last-child { border-bottom: none; }
+
+  .log-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; }
+  .badge-a { background: #1e2c00; color: var(--accent-a); }
+  .badge-b { background: #00282a; color: var(--accent-b); }
+  .badge-c { background: #2c1800; color: var(--accent-c); }
+
+  .log-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 2rem; }
+
+  @media (max-width: 700px) {
+    .stats-grid, .poster-grid, .qr-grid { grid-template-columns: 1fr; }
+    .settings-row { grid-template-columns: 1fr; }
+    .settings-row-2 { grid-template-columns: 1fr; }
+    .poster-count { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOCK SCREEN -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <h1>Poster Tracker</h1>
+    <p>Private dashboard — enter your password to continue</p>
+    <input type="password" id="pw-input" class="lock-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()" />
+    <button class="lock-btn" onclick="checkPw()">Unlock</button>
+    <p class="lock-error" id="pw-error">Incorrect password.</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="top-bar">
+    <h1>Poster A/B/C Test</h1>
+    <div class="top-bar-actions">
+      <button class="btn-sm" onclick="refreshStats()">↻ Refresh</button>
+      <button class="btn-sm btn-danger" onclick="resetData()">Reset data</button>
+      <button class="btn-sm" onclick="lock()">Lock</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY STATS -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total scans</div>
+      <div class="stat-value" id="total-count">0</div>
+      <div class="stat-sub">across all three posters</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Leading poster</div>
+      <div class="stat-value" id="leader-label" style="font-size:22px; padding-top:6px;">—</div>
+      <div class="stat-sub" id="leader-sub">No data yet</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Test started</div>
+      <div class="stat-value" id="start-date" style="font-size:16px; padding-top:10px;">—</div>
+      <div class="stat-sub" id="start-time"></div>
+    </div>
+  </div>
+
+  <!-- POSTER BREAKDOWN -->
+  <div class="poster-grid">
+    <div class="poster-card">
+      <div class="poster-header">
+        <div class="poster-dot dot-a"></div>
+        <div class="poster-title" id="name-a-display">Poster A</div>
+      </div>
+      <div class="poster-count count-a" id="count-a">0</div>
+      <div class="poster-pct" id="pct-a">— of total scans</div>
+      <div class="bar-track"><div class="bar-fill bar-a" id="bar-a" style="width:0%"></div></div>
+    </div>
+    <div class="poster-card">
+      <div class="poster-header">
+        <div class="poster-dot dot-b"></div>
+        <div class="poster-title" id="name-b-display">Poster B</div>
+      </div>
+      <div class="poster-count count-b" id="count-b">0</div>
+      <div class="poster-pct" id="pct-b">— of total scans</div>
+      <div class="bar-track"><div class="bar-fill bar-b" id="bar-b" style="width:0%"></div></div>
+    </div>
+    <div class="poster-card">
+      <div class="poster-header">
+        <div class="poster-dot dot-c"></div>
+        <div class="poster-title" id="name-c-display">Poster C</div>
+      </div>
+      <div class="poster-count count-c" id="count-c">0</div>
+      <div class="poster-pct" id="pct-c">— of total scans</div>
+      <div class="bar-track"><div class="bar-fill bar-c" id="bar-c" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="settings-section">
+    <div class="section-title">Configuration</div>
+    <div class="settings-row">
+      <div>
+        <div class="field-label">Poster A name</div>
+        <input type="text" class="field-input" id="name-a-input" placeholder="e.g. Version A" value="Poster A" />
+      </div>
+      <div>
+        <div class="field-label">Poster B name</div>
+        <input type="text" class="field-input" id="name-b-input" placeholder="e.g. Version B" value="Poster B" />
+      </div>
+      <div>
+        <div class="field-label">Poster C name</div>
+        <input type="text" class="field-input" id="name-c-input" placeholder="e.g. Version C" value="Poster C" />
+      </div>
+    </div>
+    <div class="settings-row-2">
+      <div>
+        <div class="field-label">Redirect URL (all QR codes go here)</div>
+        <input type="url" class="field-input" id="redirect-url" placeholder="https://yourwebsite.com" value="https://kaska.de" />
+      </div>
+      <div>
+        <div class="field-label">Dashboard password (to change)</div>
+        <input type="password" class="field-input" id="new-pw" placeholder="New password" />
+      </div>
+    </div>
+    <button class="btn-primary" onclick="saveSettings()">Save & regenerate QR codes</button>
+  </div>
+
+  <!-- QR CODES -->
+  <div class="qr-section">
+    <div class="section-title">QR codes — download and print on each poster</div>
+    <div class="qr-grid">
+      <div class="qr-item">
+        <div class="qr-label" id="qr-a-label">POSTER A</div>
+        <div class="qr-box" id="qr-a"></div>
+        <div class="qr-url" id="qr-a-url"></div>
+        <button class="btn-download" onclick="downloadQR('a')">Download QR A</button>
+      </div>
+      <div class="qr-item">
+        <div class="qr-label" id="qr-b-label">POSTER B</div>
+        <div class="qr-box" id="qr-b"></div>
+        <div class="qr-url" id="qr-b-url"></div>
+        <button class="btn-download" onclick="downloadQR('b')">Download QR B</button>
+      </div>
+      <div class="qr-item">
+        <div class="qr-label" id="qr-c-label">POSTER C</div>
+        <div class="qr-box" id="qr-c"></div>
+        <div class="qr-url" id="qr-c-url"></div>
+        <button class="btn-download" onclick="downloadQR('c')">Download QR C</button>
+      </div>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-top:1.25rem;">
+      Each QR code links to a unique tracking URL. When scanned, it registers a scan and redirects to your chosen URL.
+    </p>
+  </div>
+
+  <!-- SCAN LOG -->
+  <div class="log-section">
+    <div class="section-title">Scan log</div>
+    <div class="log-list" id="log-list">
+      <div class="log-empty" id="log-empty">No scans yet. When someone scans a QR code, it'll show up here.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_PW = 'kaska2024';
+const THIS_URL = window.location.href.split('?')[0].split('#')[0];
+
+function getState() {
+  const s = localStorage.getItem('ab_state');
+  return s ? JSON.parse(s) : {
+    countA: 0, countB: 0, countC: 0,
+    nameA: 'Poster A', nameB: 'Poster B', nameC: 'Poster C',
+    redirect: 'https://kaska.de',
+    password: DEFAULT_PW,
+    startDate: null,
+    log: []
+  };
+}
+
+function saveState(state) {
+  localStorage.setItem('ab_state', JSON.stringify(state));
+}
+
+function checkPw() {
+  const state = getState();
+  const val = document.getElementById('pw-input').value;
+  if (val === state.password) {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadDashboard();
+  } else {
+    document.getElementById('pw-error').style.display = 'block';
+    document.getElementById('pw-input').value = '';
+  }
+}
+
+function lock() {
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('lock-screen').style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').style.display = 'none';
+}
+
+function loadDashboard() {
+  const state = getState();
+  document.getElementById('name-a-input').value = state.nameA;
+  document.getElementById('name-b-input').value = state.nameB;
+  document.getElementById('name-c-input').value = state.nameC || 'Poster C';
+  document.getElementById('redirect-url').value = state.redirect;
+  refreshStats();
+  generateQRs();
+}
+
+function refreshStats() {
+  const state = getState();
+  const cC = state.countC || 0;
+  const total = state.countA + state.countB + cC;
+
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('count-a').textContent = state.countA;
+  document.getElementById('count-b').textContent = state.countB;
+  document.getElementById('count-c').textContent = cC;
+  document.getElementById('name-a-display').textContent = state.nameA;
+  document.getElementById('name-b-display').textContent = state.nameB;
+  document.getElementById('name-c-display').textContent = state.nameC || 'Poster C';
+
+  const pctA = total > 0 ? Math.round((state.countA / total) * 100) : 0;
+  const pctB = total > 0 ? Math.round((state.countB / total) * 100) : 0;
+  const pctC = total > 0 ? Math.round((cC / total) * 100) : 0;
+
+  document.getElementById('pct-a').textContent = total > 0 ? pctA + '% of total scans' : '— of total scans';
+  document.getElementById('pct-b').textContent = total > 0 ? pctB + '% of total scans' : '— of total scans';
+  document.getElementById('pct-c').textContent = total > 0 ? pctC + '% of total scans' : '— of total scans';
+  document.getElementById('bar-a').style.width = pctA + '%';
+  document.getElementById('bar-b').style.width = pctB + '%';
+  document.getElementById('bar-c').style.width = pctC + '%';
+
+  const counts = [
+    { name: state.nameA, count: state.countA },
+    { name: state.nameB, count: state.countB },
+    { name: state.nameC || 'Poster C', count: cC }
+  ];
+  const maxCount = Math.max(...counts.map(c => c.count));
+
+  if (total === 0) {
+    document.getElementById('leader-label').textContent = '—';
+    document.getElementById('leader-sub').textContent = 'No data yet';
+  } else {
+    const leaders = counts.filter(c => c.count === maxCount);
+    if (leaders.length > 1) {
+      document.getElementById('leader-label').textContent = 'Tied';
+      document.getElementById('leader-sub').textContent = maxCount + ' scans each';
+    } else {
+      const second = counts.filter(c => c.count !== maxCount).sort((a,b) => b.count - a.count)[0];
+      document.getElementById('leader-label').textContent = leaders[0].name;
+      document.getElementById('leader-sub').textContent = second ? '+' + (maxCount - second.count) + ' ahead' : maxCount + ' scans';
+    }
+  }
+
+  if (state.startDate) {
+    const d = new Date(state.startDate);
+    document.getElementById('start-date').textContent = d.toLocaleDateString('de-DE', {day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('start-time').textContent = d.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
+  }
+
+  renderLog(state.log, state.nameA, state.nameB, state.nameC || 'Poster C');
+}
+
+function renderLog(log, nameA, nameB, nameC) {
+  const container = document.getElementById('log-list');
+  const empty = document.getElementById('log-empty');
+  if (!log || log.length === 0) {
+    empty.style.display = 'block';
+    container.innerHTML = '';
+    container.appendChild(empty);
+    return;
+  }
+  const entries = [...log].reverse().slice(0, 50);
+  container.innerHTML = entries.map(e => {
+    const d = new Date(e.time);
+    const timeStr = d.toLocaleString('de-DE', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const name = e.poster === 'a' ? nameA : e.poster === 'b' ? nameB : nameC;
+    const cls = 'badge-' + e.poster;
+    return `<div class="log-entry">
+      <span class="log-badge ${cls}">${e.poster.toUpperCase()}</span>
+      <span>${name}</span>
+      <span style="margin-left:auto">${timeStr}</span>
+    </div>`;
+  }).join('');
+}
+
+function saveSettings() {
+  const state = getState();
+  state.nameA = document.getElementById('name-a-input').value || 'Poster A';
+  state.nameB = document.getElementById('name-b-input').value || 'Poster B';
+  state.nameC = document.getElementById('name-c-input').value || 'Poster C';
+  state.redirect = document.getElementById('redirect-url').value || 'https://kaska.de';
+  const newPw = document.getElementById('new-pw').value;
+  if (newPw.trim()) { state.password = newPw.trim(); }
+  document.getElementById('new-pw').value = '';
+  saveState(state);
+  refreshStats();
+  generateQRs();
+}
+
+function resetData() {
+  if (!confirm('Reset all scan data? This cannot be undone.')) return;
+  const state = getState();
+  state.countA = 0; state.countB = 0; state.countC = 0;
+  state.log = []; state.startDate = null;
+  saveState(state);
+  refreshStats();
+}
+
+function handleTracking() {
+  const params = new URLSearchParams(window.location.search);
+  const poster = params.get('poster');
+  if (poster === 'a' || poster === 'b' || poster === 'c') {
+    const state = getState();
+    if (!state.startDate) state.startDate = new Date().toISOString();
+    if (poster === 'a') state.countA++;
+    else if (poster === 'b') state.countB++;
+    else state.countC = (state.countC || 0) + 1;
+    if (!state.log) state.log = [];
+    state.log.push({ poster, time: new Date().toISOString() });
+    saveState(state);
+    setTimeout(() => { window.location.href = state.redirect; }, 150);
+  }
+}
+
+function getTrackingURL(poster) {
+  return THIS_URL + '?poster=' + poster;
+}
+
+function generateQRs() {
+  const state = getState();
+  ['a','b','c'].forEach(p => {
+    const url = getTrackingURL(p);
+    const nameKey = 'name' + p.toUpperCase();
+    document.getElementById('qr-' + p + '-label').textContent = (state[nameKey] || ('Poster ' + p.toUpperCase())).toUpperCase();
+    document.getElementById('qr-' + p + '-url').textContent = url;
+    document.getElementById('qr-' + p).innerHTML = '';
+    new QRCode(document.getElementById('qr-' + p), {
+      text: url, width: 160, height: 160,
+      colorDark: '#000', colorLight: '#fff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  });
+}
+
+function downloadQR(poster) {
+  const el = document.getElementById('qr-' + poster);
+  const canvas = el.querySelector('canvas');
+  if (!canvas) { alert('QR not ready, try again in a moment.'); return; }
+  const state = getState();
+  const name = (state['name' + poster.toUpperCase()] || ('Poster ' + poster.toUpperCase()));
+  const link = document.createElement('a');
+  link.download = 'QR-' + name.replace(/\s+/g, '-') + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+handleTracking();
+</script>
+</body>
+</html>
