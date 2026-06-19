@@ -17,7 +17,7 @@
       font-family: Arial, sans-serif;
     }
 
-    iframe {
+    #tracker {
       display: none;
     }
   </style>
@@ -28,16 +28,24 @@
 
   <script>
     const params = new URLSearchParams(window.location.search);
-    const poster = params.get("poster") || "unknown";
+
+    const allowedPosters = ["a", "b", "c"];
+    const requestedPoster = String(
+      params.get("poster") || ""
+    ).toLowerCase();
+
+    const poster = allowedPosters.includes(requestedPoster)
+      ? requestedPoster
+      : "unknown";
 
     const APPS_SCRIPT_URL =
-      "https://script.google.com/macros/s/1RC-C56hNCaGGKW4_aJC6zHVhk3zy_J_yIaMI3FR30j8/exec";
+      "https://script.google.com/macros/s/AKfycbyHWqB_w_c8mOlfVBZIXfEl89cjloi4PRVC5dsLLpTikkMnaPgfU2ht2M128Gz187HyeA/exec";
 
     const trackerUrl =
       APPS_SCRIPT_URL +
       "?poster=" +
       encodeURIComponent(poster) +
-      "&timestamp=" +
+      "&cache=" +
       Date.now();
 
     const instagramUrl =
@@ -48,25 +56,32 @@
       "&utm_content=poster_" +
       encodeURIComponent(poster);
 
-    const trackingFrame = document.createElement("iframe");
-    trackingFrame.src = trackerUrl;
-    trackingFrame.setAttribute("aria-hidden", "true");
-    document.body.appendChild(trackingFrame);
-
-    let redirected = false;
+    let hasRedirected = false;
 
     function redirectToInstagram() {
-      if (redirected) return;
-      redirected = true;
+      if (hasRedirected) return;
+
+      hasRedirected = true;
       window.location.replace(instagramUrl);
     }
 
-    trackingFrame.addEventListener("load", () => {
-      setTimeout(redirectToInstagram, 500);
-    });
+    const tracker = new Image();
 
-    // Fallback in case the iframe load event is blocked or delayed.
-    setTimeout(redirectToInstagram, 4000);
+    tracker.id = "tracker";
+
+    tracker.onload = function () {
+      setTimeout(redirectToInstagram, 300);
+    };
+
+    tracker.onerror = function () {
+      setTimeout(redirectToInstagram, 300);
+    };
+
+    tracker.src = trackerUrl;
+
+    document.body.appendChild(tracker);
+
+    setTimeout(redirectToInstagram, 5000);
   </script>
 </body>
 </html>
