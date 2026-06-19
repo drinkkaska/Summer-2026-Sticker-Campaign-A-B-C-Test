@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title>Opening Kaska…</title>
 
   <style>
@@ -13,9 +12,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: Arial, sans-serif;
       background: #f5f1e8;
       color: #111;
+      font-family: Arial, sans-serif;
     }
   </style>
 </head>
@@ -27,10 +26,16 @@
     const params = new URLSearchParams(window.location.search);
     const poster = params.get("poster") || "unknown";
 
+    // Replace this with the exact Apps Script URL that worked directly.
+    const APPS_SCRIPT_URL =
+      "https://script.google.com/macros/s/AKfycbx1VH2KFp0Q8UHuVISaDR3m7OXYjcdFe-fyQuO7Ffdv9gO2ADZfvEOAdqaKtz2viJY/exec";
+
     const trackerUrl =
-      "https://script.google.com/macros/s/AKfycbx1VH2KFp0Q8UHuVISaDR3m7OXYjcdFe-fyQuO7Ffdv9gO2ADZfvEOAdqaKtz2viJY/exec" +
+      APPS_SCRIPT_URL +
+      "?poster=" +
       encodeURIComponent(poster) +
-      "&logonly=1";
+      "&timestamp=" +
+      Date.now();
 
     const instagramUrl =
       "https://www.instagram.com/drinkkaska/" +
@@ -40,14 +45,24 @@
       "&utm_content=poster_" +
       encodeURIComponent(poster);
 
-    fetch(trackerUrl, {
-      mode: "no-cors",
-      keepalive: true
-    });
+    async function logAndRedirect() {
+      try {
+        await Promise.race([
+          fetch(trackerUrl, {
+            method: "GET",
+            mode: "no-cors",
+            cache: "no-store"
+          }),
+          new Promise(resolve => setTimeout(resolve, 3000))
+        ]);
+      } catch (error) {
+        console.error("Scan logging failed:", error);
+      } finally {
+        window.location.replace(instagramUrl);
+      }
+    }
 
-    setTimeout(() => {
-      window.location.replace(instagramUrl);
-    }, 300);
+    logAndRedirect();
   </script>
 </body>
 </html>
